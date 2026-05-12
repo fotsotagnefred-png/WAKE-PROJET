@@ -4,16 +4,17 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+
     // 1. Gestion du Menu Mobile
     const navbarContent = document.querySelector('.navbar-content');
     const navLinks = document.querySelector('.nav-links');
-    
+
     if (navbarContent && navLinks) {
         const menuBtn = document.createElement('button');
         menuBtn.className = 'mobile-menu-btn';
         menuBtn.innerHTML = '<span></span><span></span><span></span>';
         menuBtn.style.display = 'none';
-        
+
         const style = document.createElement('style');
         style.textContent = `
             @media (max-width: 768px) {
@@ -69,25 +70,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 2. Animation de la Navbar
+    // 2. Animation de la Navbar au scroll
     const navbar = document.querySelector('.navbar');
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-            navbar.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
-            navbar.style.padding = '5px 0';
-        } else {
-            navbar.style.boxShadow = 'none';
-            navbar.style.padding = '0';
-        }
-    });
+    if (navbar) {
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+                navbar.style.padding = '5px 0';
+            } else {
+                navbar.style.boxShadow = 'none';
+                navbar.style.padding = '0';
+            }
+        });
+    }
 
-    // 3. Liens actifs
+    // 3. Liens de navigation actifs selon la section visible
     const sections = document.querySelectorAll('section[id]');
     window.addEventListener('scroll', () => {
         let current = '';
         sections.forEach(section => {
             const sectionTop = section.offsetTop;
-            if (pageYOffset >= (sectionTop - 150)) {
+            if (window.pageYOffset >= (sectionTop - 150)) {
                 current = section.getAttribute('id');
             }
         });
@@ -103,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 4. Animations Reveal
+    // 4. Animations d'apparition au scroll
     const revealElements = document.querySelectorAll('.feature-card, .scent-item, .article-card, .team-card, .value-card');
     const revealObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -127,6 +130,8 @@ document.addEventListener('DOMContentLoaded', () => {
     faqCards.forEach(card => {
         const question = card.querySelector('h3');
         const answer = card.querySelector('p');
+        if (!question || !answer) return;
+
         answer.style.maxHeight = '0';
         answer.style.overflow = 'hidden';
         answer.style.transition = 'max-height 0.3s ease';
@@ -136,12 +141,15 @@ document.addEventListener('DOMContentLoaded', () => {
         card.addEventListener('click', () => {
             const isOpen = answer.style.maxHeight !== '0px';
             faqCards.forEach(other => {
-                other.querySelector('p').style.maxHeight = '0';
-                other.querySelector('h3 span').style.transform = 'rotate(0)';
+                const otherAnswer = other.querySelector('p');
+                const otherSpan = other.querySelector('h3 span');
+                if (otherAnswer) otherAnswer.style.maxHeight = '0';
+                if (otherSpan) otherSpan.style.transform = 'rotate(0)';
             });
             if (!isOpen) {
                 answer.style.maxHeight = answer.scrollHeight + 'px';
-                question.querySelector('span').style.transform = 'rotate(45deg)';
+                const span = question.querySelector('span');
+                if (span) span.style.transform = 'rotate(45deg)';
             }
         });
     });
@@ -151,43 +159,40 @@ document.addEventListener('DOMContentLoaded', () => {
     if (contactForm) {
         contactForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const submitBtn = contactForm.querySelector('button[type="submit"]');
             const originalText = submitBtn.textContent;
-            
-            // Récupération des données du formulaire
+
             const formData = new FormData(contactForm);
             const data = Object.fromEntries(formData.entries());
-            
-            // État de chargement
+
             submitBtn.disabled = true;
             submitBtn.textContent = 'Envoi en cours...';
-            
+
             try {
-                // REMPLACEZ L'URL CI-DESSOUS PAR VOTRE URL DE WEBHOOK MAKE
                 const response = await fetch('https://hook.eu1.make.com/yqwy2bju3llv2urru2wcjtwo3pufoaaj', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data),
                 });
 
                 if (response.ok) {
-                    // Message de succès
                     const successMsg = document.createElement('div');
-                    successMsg.style.cssText = 'padding:1rem; margin-top:1rem; background:#d4edda; color:#155724; border-radius:0.5rem; text-align:center;';
-                    successMsg.textContent = 'Merci ! Votre message a été envoyé. Vous allez recevoir un email de confirmation.';
-                    
+                    successMsg.style.cssText = 'padding:1rem; margin-top:1rem; background:#d4edda; color:#155724; border-radius:0.5rem; text-align:center; font-weight:600;';
+                    successMsg.textContent = '✅ Merci ! Votre message a bien été envoyé. Nous vous répondrons sous 24h.';
                     contactForm.appendChild(successMsg);
                     contactForm.reset();
-                    
-                    setTimeout(() => successMsg.remove(), 5000);
+                    setTimeout(() => successMsg.remove(), 6000);
                 } else {
-                    throw new Error('Erreur serveur');
+                    throw new Error('Erreur serveur : ' + response.status);
                 }
             } catch (error) {
-                alert('Désolé, une erreur est survenue lors de l\'envoi. Veuillez réessayer.');
+                console.error('Erreur webhook Make:', error);
+                const errorMsg = document.createElement('div');
+                errorMsg.style.cssText = 'padding:1rem; margin-top:1rem; background:#f8d7da; color:#721c24; border-radius:0.5rem; text-align:center;';
+                errorMsg.textContent = '❌ Une erreur est survenue. Veuillez réessayer ou nous contacter à contact@wake.fr';
+                contactForm.appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 6000);
             } finally {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
@@ -198,7 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 7. Bouton Retour en haut
     const backToTop = document.createElement('button');
     backToTop.innerHTML = '↑';
-    backToTop.style.cssText = 'position:fixed; bottom:20px; right:20px; width:40px; height:40px; border-radius:50%; background:var(--primary); color:white; border:none; cursor:pointer; display:none; font-size:20px; z-index:1000; box-shadow:0 2px 10px rgba(0,0,0,0.2);';
+    backToTop.setAttribute('aria-label', 'Retour en haut');
+    backToTop.style.cssText = 'position:fixed; bottom:20px; right:20px; width:44px; height:44px; border-radius:50%; background:var(--primary); color:white; border:none; cursor:pointer; display:none; font-size:20px; z-index:1000; box-shadow:0 2px 10px rgba(0,0,0,0.2);';
     document.body.appendChild(backToTop);
 
     window.addEventListener('scroll', () => {
@@ -208,4 +214,5 @@ document.addEventListener('DOMContentLoaded', () => {
     backToTop.addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
+
 });
